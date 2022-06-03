@@ -1,93 +1,53 @@
-import express, {Request ,Response} from 'express'
-import {Router} from 'express'
-import {User , TheUserStore} from './user.modle'
-import { sign } from 'jsonwebtoken'
-import userToken from '../../middlewares/userToken'
+import { Application, Request, Response } from "express";
+import { hashSync, compareSync, genSalt } from "bcrypt";
+import { UserStore, User } from "./user.modle";
+import { config } from "../../config";
 
-const store = new TheUserStore()
+const store = new UserStore();
 
-//get all users handler function
-
-const getAllUsers = async (_req: Request, res: Response) => {
+const index = async (_req: Request, res: Response): Promise<void> => {
     try {
-        const users = await store.index()
-            res.json(users)
-    } catch(err) { 
-         res.status(400)
-         res.json(err)
-   }
-}
-
-//get order by id handler function
-
-const getUser = async (req: Request, res: Response) => {
-    try {
-        const id=req.params.id
-       const user = await store.show(id)
-       res.json(user)
-    } catch(err) { 
-         res.status(400)
-         res.json(err)
-   }
-}
-
-
-//create order handler function
-
-const createNewUser = async (req: Request, res: Response) => {
-    try {
-        const u: User = {
-            username: req.body.username,
-            firstname: req.body.firstname,
-            lastname: req.body.lastname,
-            password:req.body.password
-        }
-        const id = req.body.id
-        const jwt:unknown =process.env.JWT_SECRET
-        const token = sign({id} , jwt as string);
-
-        const theNewUser  = await store.create(u)
-        res.json({token, ...theNewUser})
-    } catch(err) {
-        res.status(400)
-        res.json(err)
-    }
-}
-
-//authentication user handler function
-
-const authUser = async (_req: Request, res: Response) => {
-    try {
-        const signIn = await store.auth(_req.body.username, _req.body.password)
-        res.status(200).json(signIn)
+        const indexUsers = await store.index();
+        res.json(indexUsers);
     } catch (err) {
         res.status(400)
         res.json(err)
     }
 }
 
-
-//delete user by id handler function
-
-const deleteUser = async (req: Request, res: Response) => {
+const show = async (req: Request, res: Response): Promise<void> => {
     try {
-        const user = await store.delete(req.params.id);
-        res.json(user);
-    } catch(err) { 
+        const showUser = await store.show(req.params.id);
+        res.json(showUser);
+    } catch (err) {
         res.status(400)
         res.json(err)
-  }
+    }
 }
 
+const create = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const salt = await genSalt(parseInt(config.saltRounds))
+        const hash = hashSync(req.body.password + config.pepper, salt)
+        const users: User = {
+            firstname: req.body.firstname,
+            lastname: req.body.lastname,
+            username: req.body.username,
+            email: req.body.email,
+            password: hash,
+        }
+        const createUsers = await store.create(users);
+        res.json(createUsers);
+    } catch (err) {
+        res.status(400)
+        res.json(err)
+    }
+}
 
+const user_store = (app: Application) => {
+    app.get("/users", index);
+    app.get("/users/:id", show);
+    app.post("/users", create);
+}
 
-// user routes
- const UserRoutes = Router()
-
-
-  UserRoutes.get('/', userToken, getAllUsers)
-  UserRoutes.get('/:id', userToken, getUser)
-  UserRoutes.post('/new',createNewUser)
-UserRoutes.post('/signin', userToken,authUser)
-UserRoutes.delete('/:id' ,userToken , deleteUser)
-export default UserRoutes
+export default user_store;

@@ -1,112 +1,76 @@
-import {Database} from "../../database"
-import { genSalt , hashSync , compareSync} from 'bcryptjs'
+import mongoose from "mongoose";
 
-export interface User {
-  id?: number;
-  username : string
-  firstname: string
-  lastname: string
-  password: string
+export type User = {
+  id?: Number;
+  firstname: string;
+  lastname: string;
+  username: string;
+  email: string;
+  password: string;
 }
 
-export class TheUserStore {
+const userSchema = new mongoose.Schema({
+  firstname: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  lastname: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  username: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true,
+    trim: true
+  },
+})
 
+const users = mongoose.model("User", userSchema)
 
-  //index method
+export class UserStore {
   async index(): Promise<User[]> {
     try {
-    
-      const conn = await Database.connect()
-      const sql = 'SELECT * FROM Users'
-
-      const result = await conn.query(sql)
-
-      conn.release()
-
-      return result.rows 
+      const result = await users.find({})
+      return result;
     } catch (err) {
-      throw new Error(`Cannot display the users. Error: ${err}`)
+      throw new Error(`Unable to index Users. Error: ${err}`)
     }
   }
 
-
-  //show method
   async show(id: string): Promise<User> {
     try {
-    const sql = 'SELECT * FROM Users WHERE id=($1)'
-    const conn = await Database.connect()
-
-    const result = await conn.query(sql, [id])
-
-    conn.release()
-
-    return result.rows[0]
+      const result = await users.findById(id)
+      return result;
     } catch (err) {
-        throw new Error(`Cannot find user ${id}. Error: ${err}`)
+      throw new Error(`Unable to Show Users. Error: ${err}`)
     }
   }
 
-
-  //create method
-
-  async create(u: User): Promise<User> {
-      try {
-
-    const sql = 'INSERT INTO Users (username ,firstName, lastName , password) VALUES($1, $2, $3 ,$4) RETURNING *'
-    
-    const conn = await Database.connect()
-    const salt =await genSalt(10)
-    const hashedPassword = await hashSync(u.password , salt)
-    const result = await conn
-        .query(sql, [u.username ,u.firstname , u.lastname , hashedPassword])
-
-    conn.release()
-
-    return result.rows[0]
-
-      } catch (err) {
-          throw new Error(`unable create new user. Error: ${err}`)
-      }
-  }
-
-
-  //authentication method
-
-  async auth(username: string, password: string): Promise<User | null> {
-    const conn = await Database.connect()
-    const sql = 'SELECT password FROM users WHERE username=($1)'
-
-    const result = await conn.query(sql, [username])
-
-    if(result.rows.length) {
-
-      const user = result.rows[0]
-
-      console.log(user)
-
-      if (compareSync(password, user.password)) {
-        return user
-      }
-    }
-
-    return null
-  }
-
-
-  //delete method
-  async delete(id: string): Promise<User> {
+  async create(user: User): Promise<User> {
     try {
-
-        const sql = 'DELETE FROM Users WHERE id=($1)';
-        const conn = await Database.connect();
-        const result = await conn.query(sql, [id]);
-        conn.release();
-      return result.rows[0]
+      const createUsers = new users(user)
+      const result = await createUsers.save()
+      return result;
     } catch (err) {
-        throw new Error(`unable to delete this user. Error: ${err}`);
-    
+      throw new Error(`Unable to index Users. Error: ${err}`)
     }
+  }
+
+  async authentication(email: any): Promise<User> {
+    const user = await users.findOne(email).exec()
+
   }
 }
-
-   

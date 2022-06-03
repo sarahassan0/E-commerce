@@ -7,7 +7,7 @@ const userToken = (req: Request, res: Response, next:NextFunction) => {
     try {
         const authorizationHeader:string|undefined = req.headers.authorization!
         const token:string = authorizationHeader.split(' ')[1] 
-        const jwt:unknown =process.env.JWT_SECRET
+        const jwt:unknown = process.env.JWT_SECRET
          verify(token ,jwt as string)
 
         next()

@@ -1,6 +1,6 @@
 
 import supertest from 'supertest'
-import app from '../../../app'
+import app from '../..'
 import { Product } from '../../components/product/product.modle'
 
 

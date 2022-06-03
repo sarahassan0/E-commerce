@@ -1,6 +1,6 @@
 
 import supertest from 'supertest'
-import app from '../../../app'
+import app from '../../index'
 import { Order } from '../../components/order/order.modle'
 
 
